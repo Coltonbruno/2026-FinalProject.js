@@ -5,7 +5,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        // No assets needed - using simple shapes
+        this.load.image('player', 'assets/player.png');
     }
 
     create() {
@@ -14,7 +14,7 @@ export class GameScene extends Phaser.Scene {
         this.score = 0;
         this.survivalTime = 0;
         this.speedMultiplier = 1;
-        this.trafficSpawnRate = 1000; // milliseconds between spawns
+        this.trafficSpawnRate = 400; // milliseconds between spawns
         this.baseTrafficSpeed = 500;
 
         // ========== WORLD BOUNDS & CAMERA ==========
@@ -32,7 +32,7 @@ export class GameScene extends Phaser.Scene {
         this.player = this.createPlayerCar();
 
         // ========== CAMERA FOLLOW ==========
-        this.cameras.main.startFollow(this.player);
+        this.cameras.main.startFollow(this.player, false, 1, 1, 0, 300);
 
         // ========== INPUT HANDLING ==========
         this.setupInput();
@@ -55,6 +55,11 @@ export class GameScene extends Phaser.Scene {
         }).setScrollFactor(0);
 
         this.scoreText = this.add.text(20, 80, 'Score: 0', {
+            font: '20px Arial',
+            fill: '#ffffff'
+        }).setScrollFactor(0);
+
+        this.fpsText = this.add.text(20, 110, 'FPS: 0', {
             font: '20px Arial',
             fill: '#ffffff'
         }).setScrollFactor(0);
@@ -126,13 +131,14 @@ export class GameScene extends Phaser.Scene {
         const displaySpeed = Math.round(Math.abs(this.player.body.velocity.y) / 10);
         this.speedText.setText(`Speed: ${displaySpeed}`);
         this.scoreText.setText(`Score: ${Math.round(this.score)}`);
+        this.fpsText.setText(`FPS: ${Math.round(this.game.loop.actualFps)}`);
 
         // Increase score based on survival and speed
         this.score += (displaySpeed * 0.1 * delta) / 1000;
 
         // ========== SPAWN TRAFFIC ==========
         this.trafficSpawnTimer += delta;
-        if (this.trafficSpawnTimer > this.spawnInterval) {
+        if (this.trafficSpawnTimer > this.spawnInterval && Math.abs(this.playerVelocityY) > 50) {
             this.trafficSpawnTimer = 0;
             this.spawnTrafficCar();
         }
@@ -223,8 +229,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     createPlayerCar() {
-        const car = this.add.rectangle(this.roadX + this.roadWidth / 2, 9500, 40, 60, 0x00ff00);
+        const car = this.add.sprite(this.roadX + this.roadWidth / 2, 9500, 'player');
         this.physics.add.existing(car);
+        car.body.setSize(120, 120, true);
         car.body.setBounce(0);
         car.body.setDrag(0.5);
         car.body.setMaxVelocity(1000, 1000);
@@ -289,8 +296,12 @@ export class GameScene extends Phaser.Scene {
         // Apply calculated velocity to player
         this.player.body.setVelocityY(this.playerVelocityY);
 
-        // Horizontal movement
-        const moveSpeed = 400;
+        // Horizontal movement - only allow when car is moving forward, scaled by forward speed
+        const baseMoveSPeed = 400;
+        const currentForwardSpeed = Math.abs(this.playerVelocityY);
+        const speedRatio = currentForwardSpeed / maxSpeed;
+        const moveSpeed = baseMoveSPeed * speedRatio;
+
         if (this.moveLeft) {
             this.player.body.setVelocityX(-moveSpeed);
         } else if (this.moveRight) {
@@ -318,9 +329,10 @@ export class GameScene extends Phaser.Scene {
         const laneX = lanes[Math.floor(Math.random() * lanes.length)];
 
         // Create traffic car at a random distance ahead of player
-        const spawnDistance = 200 + Math.random() * 300;
+        const spawnDistance = 800 + Math.random() * 400;
         const trafficCar = this.add.rectangle(laneX, this.player.y - spawnDistance, 40, 60, 0xff6600);
         this.physics.add.existing(trafficCar);
+        trafficCar.body.setSize(9, 28.8, true);
 
         // Traffic moves straight at constant speed
         const trafficSpeed = -this.baseTrafficSpeed * this.speedMultiplier;
@@ -334,7 +346,7 @@ export class GameScene extends Phaser.Scene {
         this.gameActive = false;
 
         // Screen shake effect
-        this.cameras.main.shake(300, 0.01);
+        this.cameras.main.shake(1000, 0.01);
 
         // Stop player movement
         player.body.setVelocity(0, 0);
