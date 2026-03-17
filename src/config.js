@@ -10,5 +10,10 @@ export const gameConfig = {
             debug: false
         }
     },
+    render: {
+        context: {
+            willReadFrequently: true
+        }
+    },
     scene: []
 };

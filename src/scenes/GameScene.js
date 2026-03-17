@@ -6,6 +6,9 @@ export class GameScene extends Phaser.Scene {
 
     preload() {
         this.load.image('player', 'assets/player.png');
+        this.load.image('traffic', 'assets/traffic.png');
+        this.load.image('traffic2', 'assets/traffic2.png');
+        this.load.image('traffic3', 'assets/traffic3.png');
     }
 
     create() {
@@ -14,8 +17,8 @@ export class GameScene extends Phaser.Scene {
         this.score = 0;
         this.survivalTime = 0;
         this.speedMultiplier = 1;
-        this.trafficSpawnRate = 400; // milliseconds between spawns
-        this.baseTrafficSpeed = 500;
+        this.trafficSpawnRate = 200; // milliseconds between spawns
+        this.baseTrafficSpeed = 400;
 
         // ========== WORLD BOUNDS & CAMERA ==========
         this.physics.world.setBounds(0, -50000, 800, 100000);
@@ -44,17 +47,12 @@ export class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.trafficGroup, this.handleCollision, null, this);
 
         // ========== UI TEXT ==========
-        this.timerText = this.add.text(20, 20, 'Time: 0s', {
-            font: '20px Arial',
-            fill: '#ffffff'
+        this.counterText = this.add.text(20, 200, 'Score: 0\nTime: 0s', {
+            font: 'bold 24px Arial',
+            fill: '#ffff00'
         }).setScrollFactor(0);
 
-        this.speedText = this.add.text(20, 50, 'Speed: 0', {
-            font: '20px Arial',
-            fill: '#ffffff'
-        }).setScrollFactor(0);
-
-        this.scoreText = this.add.text(20, 80, 'Score: 0', {
+        this.speedText = this.add.text(20, 80, 'Speed: 0', {
             font: '20px Arial',
             fill: '#ffffff'
         }).setScrollFactor(0);
@@ -72,7 +70,8 @@ export class GameScene extends Phaser.Scene {
 
         this.restartText = this.add.text(400, 400, '', {
             font: '24px Arial',
-            fill: '#ffff00'
+            fill: '#ffff00',
+            align: 'center'
         }).setOrigin(0.5).setScrollFactor(0);
 
         // ========== TRAFFIC SPAWNING ==========
@@ -97,7 +96,7 @@ export class GameScene extends Phaser.Scene {
 
         // ========== UPDATE SURVIVAL TIME & DIFFICULTY ==========
         this.survivalTime += delta / 1000;
-        this.timerText.setText(`Time: ${Math.floor(this.survivalTime)}s`);
+        this.counterText.setText(`Score: ${Math.round(this.score)}\nTime: ${Math.floor(this.survivalTime)}s`);
 
         // Increase difficulty every 10 seconds
         this.difficultyTimer += delta;
@@ -130,7 +129,6 @@ export class GameScene extends Phaser.Scene {
         // ========== UPDATE UI ==========
         const displaySpeed = Math.round(Math.abs(this.player.body.velocity.y) / 10);
         this.speedText.setText(`Speed: ${displaySpeed}`);
-        this.scoreText.setText(`Score: ${Math.round(this.score)}`);
         this.fpsText.setText(`FPS: ${Math.round(this.game.loop.actualFps)}`);
 
         // Increase score based on survival and speed
@@ -138,7 +136,7 @@ export class GameScene extends Phaser.Scene {
 
         // ========== SPAWN TRAFFIC ==========
         this.trafficSpawnTimer += delta;
-        if (this.trafficSpawnTimer > this.spawnInterval && Math.abs(this.playerVelocityY) > 50) {
+        if (this.trafficSpawnTimer > this.spawnInterval) {
             this.trafficSpawnTimer = 0;
             this.spawnTrafficCar();
         }
@@ -231,11 +229,14 @@ export class GameScene extends Phaser.Scene {
     createPlayerCar() {
         const car = this.add.sprite(this.roadX + this.roadWidth / 2, 9500, 'player');
         this.physics.add.existing(car);
-        car.body.setSize(120, 120, true);
+        car.body.setSize(80, 103, true);
         car.body.setBounce(0);
         car.body.setDrag(0.5);
         car.body.setMaxVelocity(1000, 1000);
         car.body.setCollideWorldBounds(true);
+        car.setAlpha(1);
+        car.setTint(0xffffff);
+        car.setDepth(10);
         return car;
     }
 
@@ -263,6 +264,12 @@ export class GameScene extends Phaser.Scene {
 
         this.input.keyboard.on('keydown-R', () => {
             if (!this.gameActive) {
+                // Clear all traffic entities
+                this.trafficGroup.clear(true, true);
+                // Clear lane markings
+                this.laneMarkings.forEach(marking => marking.destroy());
+                this.laneMarkings = [];
+                // Restart scene
                 this.scene.restart();
             }
         });
@@ -330,12 +337,15 @@ export class GameScene extends Phaser.Scene {
 
         // Create traffic car at a random distance ahead of player
         const spawnDistance = 800 + Math.random() * 400;
-        const trafficCar = this.add.rectangle(laneX, this.player.y - spawnDistance, 40, 60, 0xff6600);
+        const trafficTypes = ['traffic', 'traffic2', 'traffic3'];
+        const trafficType = trafficTypes[Math.floor(Math.random() * 3)];
+        const trafficCar = this.add.sprite(laneX, this.player.y - spawnDistance, trafficType);
         this.physics.add.existing(trafficCar);
         trafficCar.body.setSize(9, 28.8, true);
+        trafficCar.setAlpha(1);
 
         // Traffic moves straight at constant speed
-        const trafficSpeed = -this.baseTrafficSpeed * this.speedMultiplier;
+        const trafficSpeed = this.baseTrafficSpeed * this.speedMultiplier;
         trafficCar.body.setVelocityY(trafficSpeed);
 
         this.trafficGroup.add(trafficCar);
@@ -347,6 +357,11 @@ export class GameScene extends Phaser.Scene {
 
         // Screen shake effect
         this.cameras.main.shake(1000, 0.01);
+
+        // Stop shake after 1 second
+        this.time.delayedCall(1000, () => {
+            this.cameras.main.stopShake();
+        });
 
         // Stop player movement
         player.body.setVelocity(0, 0);
@@ -362,3 +377,4 @@ export class GameScene extends Phaser.Scene {
         });
     }
 }
+
