@@ -13,13 +13,96 @@
             align-items: center;
             height: 100vh;
             background-color: #222;
+            font-family: Arial, sans-serif;
         }
         canvas {
             display: block;
         }
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .menu-overlay.hidden {
+            display: none;
+        }
+        .menu-container {
+            text-align: center;
+            color: #ffff00;
+        }
+        .menu-title {
+            font-size: 72px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px #ffff00;
+        }
+        .menu-subtitle {
+            font-size: 24px;
+            margin-bottom: 60px;
+            color: #ffffff;
+        }
+        .start-button {
+            font-size: 32px;
+            padding: 20px 60px;
+            background-color: #ffff00;
+            color: #000000;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .start-button:hover {
+            transform: scale(1.1);
+        }
+        .start-button:active {
+            transform: scale(0.95);
+        }
+        .controls {
+            margin-top: 80px;
+            font-size: 20px;
+            color: #ffffff;
+            text-align: center;
+        }
+        .controls-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffff00;
+            margin-bottom: 15px;
+        }
+        .control-item {
+            margin: 8px 0;
+        }
+        .control-key {
+            color: #ffff00;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
+    <!-- Start Menu -->
+    <div id="startMenu" class="menu-overlay">
+        <div class="menu-container">
+            <div class="menu-title">STREET RACER</div>
+            <div class="menu-subtitle">Survive the traffic and rack up points</div>
+            <button class="start-button" onclick="window.startGame()">START GAME</button>
+            <div class="controls">
+                <div class="controls-title">Controls:</div>
+                <div class="control-item"><span class="control-key">W</span> - Accelerate</div>
+                <div class="control-item"><span class="control-key">A</span> - Go Left</div>
+                <div class="control-item"><span class="control-key">D</span> - Go Right</div>
+                <div class="control-item"><span class="control-key">S</span> - Decelerate</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Phaser 3 from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
     

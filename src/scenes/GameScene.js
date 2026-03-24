@@ -149,6 +149,43 @@ export class GameScene extends Phaser.Scene {
 
         // ========== UPDATE TRAFFIC ==========
         this.trafficGroup.children.entries.forEach(car => {
+            // Check if car is visible on screen
+            const isOnScreen = car.y > this.player.y - 800 && car.y < this.player.y + 800;
+            
+            // Handle lane changes for lane-changer cars
+            if (car.isLaneChanger && !car.hasChangedLane) {
+                // Mark when car becomes visible
+                if (isOnScreen && !car.isVisibleOnScreen) {
+                    car.isVisibleOnScreen = true;
+                    car.visibleTimer = 0;
+                }
+                
+                // Once visible, count down and change lanes
+                if (car.isVisibleOnScreen) {
+                    car.visibleTimer = (car.visibleTimer || 0) + delta;
+                    if (car.visibleTimer > car.laneChangeRandomDelay) {
+                        car.hasChangedLane = true;
+                        // Calculate new lane index
+                        let newLaneIndex = car.laneIndex + car.laneChangeDirection;
+                        // Keep within bounds
+                        if (newLaneIndex < 0) newLaneIndex = 0;
+                        if (newLaneIndex > 3) newLaneIndex = 3;
+                        // Only change if it's a different lane
+                        if (newLaneIndex !== car.laneIndex) {
+                            car.laneIndex = newLaneIndex;
+                            const newX = car.lanes[newLaneIndex];
+                            // Smoothly move to new lane over 1/4 second
+                            this.tweens.add({
+                                targets: car,
+                                x: newX,
+                                duration: 250,
+                                ease: 'Linear'
+                            });
+                        }
+                    }
+                }
+            }
+            
             // Remove cars that have gone far off-screen
             if (car.y < this.player.y - 1000 || car.y > this.player.y + 1000) {
                 car.destroy();
@@ -233,7 +270,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     createPlayerCar() {
-        const car = this.add.sprite(this.roadX + this.roadWidth / 2, 9500, 'player');
+        const laneWidth = this.roadWidth / 4;
+        const car = this.add.sprite(this.roadX + laneWidth * 2.5, 9500, 'player');
         this.physics.add.existing(car);
         car.setScale(1);
         car.body.setSize(80, 103, true);
@@ -252,8 +290,7 @@ export class GameScene extends Phaser.Scene {
             w: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
             a: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
             s: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-            d: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
-            r: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R)
+            d: this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
         };
 
         // Input event listeners for continuous movement
@@ -268,18 +305,6 @@ export class GameScene extends Phaser.Scene {
 
         this.input.keyboard.on('keydown-D', () => { this.moveRight = true; });
         this.input.keyboard.on('keyup-D', () => { this.moveRight = false; });
-
-        this.input.keyboard.on('keydown-R', () => {
-            if (!this.gameActive) {
-                // Clear all traffic entities
-                this.trafficGroup.clear(true, true);
-                // Clear lane markings
-                this.laneMarkings.forEach(marking => marking.destroy());
-                this.laneMarkings = [];
-                // Restart scene
-                this.scene.restart();
-            }
-        });
     }
 
     handlePlayerMovement(delta) {
@@ -340,7 +365,8 @@ export class GameScene extends Phaser.Scene {
             this.roadX + laneWidth * 2.5,
             this.roadX + laneWidth * 3.5
         ];
-        const laneX = lanes[Math.floor(Math.random() * lanes.length)];
+        const laneIndex = Math.floor(Math.random() * lanes.length);
+        const laneX = lanes[laneIndex];
 
         // Create traffic car at a random distance ahead of player
         const spawnDistance = 800 + Math.random() * 400;
@@ -355,6 +381,16 @@ export class GameScene extends Phaser.Scene {
         const trafficSpeed = this.baseTrafficSpeed * this.speedMultiplier;
         trafficCar.body.setVelocityY(trafficSpeed);
 
+        // 1 in 5 chance to be a lane changer
+        trafficCar.isLaneChanger = Math.random() < 0.2;
+        trafficCar.hasChangedLane = false;
+        trafficCar.laneIndex = laneIndex;
+        trafficCar.laneWidth = this.roadWidth / 4;
+        trafficCar.lanes = lanes;
+        trafficCar.isVisibleOnScreen = false;
+        trafficCar.laneChangeDirection = Math.random() < 0.5 ? -1 : 1; // -1 for left, 1 for right
+        trafficCar.laneChangeRandomDelay = 1000 + Math.random() * 3000; // Random delay between 1-4 seconds after becoming visible
+
         this.trafficGroup.add(trafficCar);
     }
 
@@ -368,25 +404,21 @@ export class GameScene extends Phaser.Scene {
             localStorage.setItem('highScore', Math.round(this.highScore));
         }
 
-        // Screen shake effect
-        this.cameras.main.shake(5000, 0.01);
-
-        // Stop shake after 5 seconds
-        this.time.delayedCall(5000, () => {
-            this.cameras.main.stopShake();
-        });
+        // Screen shake effect for 3 seconds
+        this.cameras.main.shake(3000, 0.01);
 
         // Stop player movement
         player.body.setVelocity(0, 0);
         player.body.setAcceleration(0, 0);
 
-        // Display game over screen
-        this.gameOverText.setText('GAME OVER');
-        this.restartText.setText(`Time: ${Math.floor(this.survivalTime)}s | Score: ${Math.round(this.score)}\nPress R to Restart`);
-
         // Disable traffic
         this.trafficGroup.children.entries.forEach(car => {
             car.body.setVelocity(0, 0);
+        });
+
+        // Return to menu after 3 seconds
+        this.time.delayedCall(3000, () => {
+            window.returnToMenu();
         });
     }
 }
