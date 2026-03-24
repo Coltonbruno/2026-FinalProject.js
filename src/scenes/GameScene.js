@@ -5,7 +5,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('player', 'assets/player.png');
+        this.load.image('player', 'assets/car.png');
         this.load.image('traffic', 'assets/traffic.png');
         this.load.image('traffic2', 'assets/traffic2.png');
         this.load.image('traffic3', 'assets/traffic3.png');
@@ -15,6 +15,7 @@ export class GameScene extends Phaser.Scene {
         // ========== GAME STATE ==========
         this.gameActive = true;
         this.score = 0;
+        this.highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
         this.survivalTime = 0;
         this.speedMultiplier = 1;
         this.trafficSpawnRate = 200; // milliseconds between spawns
@@ -47,7 +48,7 @@ export class GameScene extends Phaser.Scene {
         this.physics.add.overlap(this.player, this.trafficGroup, this.handleCollision, null, this);
 
         // ========== UI TEXT ==========
-        this.counterText = this.add.text(20, 200, 'Score: 0\nTime: 0s', {
+        this.counterText = this.add.text(20, 200, 'Score: 0\nTime: 0s\nHigh Score: 0', {
             font: 'bold 24px Arial',
             fill: '#ffff00'
         }).setScrollFactor(0);
@@ -96,13 +97,13 @@ export class GameScene extends Phaser.Scene {
 
         // ========== UPDATE SURVIVAL TIME & DIFFICULTY ==========
         this.survivalTime += delta / 1000;
-        this.counterText.setText(`Score: ${Math.round(this.score)}\nTime: ${Math.floor(this.survivalTime)}s`);
+        this.counterText.setText(`Score: ${Math.round(this.score)}\nTime: ${Math.floor(this.survivalTime)}s\nHigh Score: ${Math.round(this.highScore)}`);
 
         // Increase difficulty every 10 seconds
         this.difficultyTimer += delta;
         if (this.difficultyTimer > 10000) {
             this.difficultyTimer = 0;
-            this.spawnInterval = Math.max(1500, this.trafficSpawnRate - 200);
+            this.spawnInterval = Math.max(100, this.spawnInterval - 30);
             this.trafficSpawnRate = this.spawnInterval;
             this.baseTrafficSpeed += 25;
             this.speedMultiplier += 0.1;
@@ -135,10 +136,15 @@ export class GameScene extends Phaser.Scene {
         this.score += (displaySpeed * 0.1 * delta) / 1000;
 
         // ========== SPAWN TRAFFIC ==========
-        this.trafficSpawnTimer += delta;
-        if (this.trafficSpawnTimer > this.spawnInterval) {
+        if (this.playerVelocityY !== 0) {
+            this.trafficSpawnTimer += delta;
+            if (this.trafficSpawnTimer > this.spawnInterval) {
+                this.trafficSpawnTimer = 0;
+                this.spawnTrafficCar();
+            }
+        } else {
+            // Reset timer when idle so traffic doesn't immediately spawn when player moves again
             this.trafficSpawnTimer = 0;
-            this.spawnTrafficCar();
         }
 
         // ========== UPDATE TRAFFIC ==========
@@ -229,6 +235,7 @@ export class GameScene extends Phaser.Scene {
     createPlayerCar() {
         const car = this.add.sprite(this.roadX + this.roadWidth / 2, 9500, 'player');
         this.physics.add.existing(car);
+        car.setScale(1);
         car.body.setSize(80, 103, true);
         car.body.setBounce(0);
         car.body.setDrag(0.5);
@@ -279,7 +286,7 @@ export class GameScene extends Phaser.Scene {
         const maxSpeed = 1000; // Maximum forward speed
         const accelerationRate = 0.03; // Gradual acceleration rate (0-1)
         const momentumDecayRate = 0.98; // Momentum decay when no input (0-1)
-        const brakingDecayRate = 0.93; // Harder braking deceleration (0-1)
+        const brakingDecayRate = 0.97; // Harder braking deceleration (0-1)
 
         // Accelerate forward (upward) - gradually increase speed when W is pressed
         if (this.accelerating) {
@@ -355,11 +362,17 @@ export class GameScene extends Phaser.Scene {
         // Game over
         this.gameActive = false;
 
-        // Screen shake effect
-        this.cameras.main.shake(1000, 0.01);
+        // Update high score
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('highScore', Math.round(this.highScore));
+        }
 
-        // Stop shake after 1 second
-        this.time.delayedCall(1000, () => {
+        // Screen shake effect
+        this.cameras.main.shake(5000, 0.01);
+
+        // Stop shake after 5 seconds
+        this.time.delayedCall(5000, () => {
             this.cameras.main.stopShake();
         });
 
