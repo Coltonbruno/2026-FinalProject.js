@@ -43,9 +43,11 @@ export class GameScene extends Phaser.Scene {
 
         // ========== PHYSICS GROUPS ==========
         this.trafficGroup = this.physics.add.group();
+        this.drunkDriverGroup = this.physics.add.group();
 
         // ========== COLLISION DETECTION ==========
         this.physics.add.overlap(this.player, this.trafficGroup, this.handleCollision, null, this);
+        this.physics.add.overlap(this.player, this.drunkDriverGroup, this.handleCollision, null, this);
 
         // ========== UI TEXT ==========
         this.counterText = this.add.text(20, 200, 'Score: 0\nTime: 0s\nHigh Score: 0', {
@@ -90,6 +92,10 @@ export class GameScene extends Phaser.Scene {
         // ========== ROAD ANIMATION ==========
         this.roadScrollOffset = 0;
         this.lastMarkingY = 0;
+
+        // ========== DRUNK DRIVER SPAWN TIMER ==========
+        this.drunkDriverSpawnTimer = 0;
+        this.drunkDriverSpawnInterval = 5000; // Spawn drunk drivers every 5 seconds (1/30 cars means roughly this interval)
     }
 
     update(time, delta) {
@@ -138,7 +144,9 @@ export class GameScene extends Phaser.Scene {
         // ========== SPAWN TRAFFIC ==========
         if (this.playerVelocityY !== 0) {
             this.trafficSpawnTimer += delta;
-            if (this.trafficSpawnTimer > this.spawnInterval) {
+            // Determine spawn interval based on speed - half as often if speed <= 250
+            const currentSpawnInterval = displaySpeed <= 250 ? this.spawnInterval * 2 : this.spawnInterval;
+            if (this.trafficSpawnTimer > currentSpawnInterval) {
                 this.trafficSpawnTimer = 0;
                 this.spawnTrafficCar();
             }
@@ -147,10 +155,56 @@ export class GameScene extends Phaser.Scene {
             this.trafficSpawnTimer = 0;
         }
 
+        // ========== SPAWN DRUNK DRIVERS ==========
+        this.drunkDriverSpawnTimer += delta;
+        if (this.drunkDriverSpawnTimer > this.drunkDriverSpawnInterval) {
+            this.drunkDriverSpawnTimer = 0;
+            this.spawnDrunkDriver();
+        }
+
+        // ========== UPDATE DRUNK DRIVERS ==========
+        this.drunkDriverGroup.children.entries.forEach(car => {
+            // Update wave motion for drunk driving
+            car.drunkWaveTime += delta;
+            const waveOffset = Math.sin(car.drunkWaveTime * car.drunkWaveFrequency) * car.drunkWaveAmplitude;
+            car.y = car.baseY + waveOffset;
+            
+            // Remove drunk drivers that have gone off the right edge
+            if (car.x > 850) {
+                car.destroy();
+            }
+        });
+
         // ========== UPDATE TRAFFIC ==========
         this.trafficGroup.children.entries.forEach(car => {
             // Check if car is visible on screen
             const isOnScreen = car.y > this.player.y - 800 && car.y < this.player.y + 800;
+            
+            // Check proximity for +10 score popup
+            const distanceToPlayer = Phaser.Math.Distance.Between(this.player.x, this.player.y, car.x, car.y);
+            if (distanceToPlayer < 15 && !car.hasClosePass) {
+                car.hasClosePass = true;
+                this.score += 10;
+                
+                // Create popup text
+                const popupText = this.add.text(car.x, car.y - 50, '+10 Score', {
+                    font: 'bold 24px Arial',
+                    fill: '#00ff00',
+                    align: 'center'
+                }).setOrigin(0.5).setScrollFactor(0.1);
+                
+                // Fade out and remove after 1 second
+                this.tweens.add({
+                    targets: popupText,
+                    alpha: 0,
+                    y: car.y - 100,
+                    duration: 1000,
+                    ease: 'Linear',
+                    onComplete: () => {
+                        popupText.destroy();
+                    }
+                });
+            }
             
             // Handle lane changes for lane-changer cars
             if (car.isLaneChanger && !car.hasChangedLane) {
@@ -172,15 +226,33 @@ export class GameScene extends Phaser.Scene {
                         if (newLaneIndex > 3) newLaneIndex = 3;
                         // Only change if it's a different lane
                         if (newLaneIndex !== car.laneIndex) {
-                            car.laneIndex = newLaneIndex;
-                            const newX = car.lanes[newLaneIndex];
-                            // Smoothly move to new lane over 1/4 second
-                            this.tweens.add({
-                                targets: car,
-                                x: newX,
-                                duration: 250,
-                                ease: 'Linear'
+                            // Check if target lane is occupied by other traffic
+                            const targetX = car.lanes[newLaneIndex];
+                            let laneOccupied = false;
+                            
+                            this.trafficGroup.children.entries.forEach(otherCar => {
+                                if (otherCar !== car) {
+                                    const distance = Math.abs(otherCar.x - targetX);
+                                    const verticalDistance = Math.abs(otherCar.y - car.y);
+                                    // Check if there's a car in the target lane within reasonable distance
+                                    if (distance < 50 && verticalDistance < 150) {
+                                        laneOccupied = true;
+                                    }
+                                }
                             });
+                            
+                            // Only proceed with lane change if lane is not occupied
+                            if (!laneOccupied) {
+                                car.laneIndex = newLaneIndex;
+                                const newX = car.lanes[newLaneIndex];
+                                // Smoothly move to new lane over 500ms
+                                this.tweens.add({
+                                    targets: car,
+                                    x: newX,
+                                    duration: 500,
+                                    ease: 'Linear'
+                                });
+                            }
                         }
                     }
                 }
@@ -274,7 +346,7 @@ export class GameScene extends Phaser.Scene {
         const car = this.add.sprite(this.roadX + laneWidth * 2.5, 9500, 'player');
         this.physics.add.existing(car);
         car.setScale(1);
-        car.body.setSize(80, 103, true);
+        car.body.setSize(70, 103, true);
         car.body.setBounce(0);
         car.body.setDrag(0.5);
         car.body.setMaxVelocity(1000, 1000);
@@ -365,8 +437,25 @@ export class GameScene extends Phaser.Scene {
             this.roadX + laneWidth * 2.5,
             this.roadX + laneWidth * 3.5
         ];
-        const laneIndex = Math.floor(Math.random() * lanes.length);
-        const laneX = lanes[laneIndex];
+        
+        // Positions between lanes (1 in 10 chance)
+        const betweenLanes = [
+            this.roadX + laneWidth * 1,
+            this.roadX + laneWidth * 2,
+            this.roadX + laneWidth * 3
+        ];
+        
+        // Determine if this car spawns between lanes
+        const spawnBetweenLanes = Math.random() < 0.1;
+        let laneX, laneIndex;
+        
+        if (spawnBetweenLanes) {
+            laneX = betweenLanes[Math.floor(Math.random() * betweenLanes.length)];
+            laneIndex = -1; // Mark as between lanes
+        } else {
+            laneIndex = Math.floor(Math.random() * lanes.length);
+            laneX = lanes[laneIndex];
+        }
 
         // Create traffic car at a random distance ahead of player
         const spawnDistance = 800 + Math.random() * 400;
@@ -381,17 +470,48 @@ export class GameScene extends Phaser.Scene {
         const trafficSpeed = this.baseTrafficSpeed * this.speedMultiplier;
         trafficCar.body.setVelocityY(trafficSpeed);
 
-        // 1 in 5 chance to be a lane changer
-        trafficCar.isLaneChanger = Math.random() < 0.2;
+        // 1 in 5 chance to be a lane changer (only if not between lanes)
+        trafficCar.isLaneChanger = !spawnBetweenLanes && Math.random() < 0.2;
         trafficCar.hasChangedLane = false;
+        trafficCar.hasClosePass = false;
         trafficCar.laneIndex = laneIndex;
         trafficCar.laneWidth = this.roadWidth / 4;
         trafficCar.lanes = lanes;
         trafficCar.isVisibleOnScreen = false;
         trafficCar.laneChangeDirection = Math.random() < 0.5 ? -1 : 1; // -1 for left, 1 for right
-        trafficCar.laneChangeRandomDelay = 1000 + Math.random() * 3000; // Random delay between 1-4 seconds after becoming visible
+        trafficCar.laneChangeRandomDelay = 0; // Change lanes immediately when visible
 
         this.trafficGroup.add(trafficCar);
+    }
+
+    spawnDrunkDriver() {
+        // Spawn drunk driver horizontally from left to right
+        const trafficTypes = ['traffic', 'traffic2', 'traffic3'];
+        const trafficType = trafficTypes[Math.floor(Math.random() * 3)];
+        
+        // Spawn at left edge with random Y position visible on screen
+        const spawnX = -50;
+        const spawnY = this.player.y + (Math.random() * 600 - 300); // Random Y around player
+        
+        const drunkDriver = this.add.sprite(spawnX, spawnY, trafficType);
+        this.physics.add.existing(drunkDriver);
+        drunkDriver.body.setSize(9, 28.8, true);
+        drunkDriver.setAlpha(1);
+        drunkDriver.setRotation(Math.PI / 2); // Rotate 90 degrees to face horizontal direction
+        
+        // Horizontal movement speed (pixel per second)
+        const horizontalSpeed = 300;
+        drunkDriver.body.setVelocityX(horizontalSpeed);
+        drunkDriver.body.setVelocityY(0);
+        
+        // Drunk driver properties
+        drunkDriver.isDrunkDriver = true;
+        drunkDriver.drunkWaveTime = 0;
+        drunkDriver.drunkWaveAmplitude = 150; // How far up/down it weaves
+        drunkDriver.drunkWaveFrequency = 0.01; // How quickly it weaves
+        drunkDriver.baseY = spawnY;
+        
+        this.drunkDriverGroup.add(drunkDriver);
     }
 
     handleCollision(player, traffic) {
@@ -413,6 +533,11 @@ export class GameScene extends Phaser.Scene {
 
         // Disable traffic
         this.trafficGroup.children.entries.forEach(car => {
+            car.body.setVelocity(0, 0);
+        });
+
+        // Disable drunk drivers
+        this.drunkDriverGroup.children.entries.forEach(car => {
             car.body.setVelocity(0, 0);
         });
 

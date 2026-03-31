@@ -84,11 +84,98 @@
             color: #ffff00;
             font-weight: bold;
         }
+        .corner-light {
+            position: fixed;
+            width: 800px;
+            height: 800px;
+            border-radius: 50%;
+            z-index: 999;
+            filter: blur(80px);
+            opacity: 0.7;
+        }
+        .corner-light.top-left {
+            top: -400px;
+            left: -400px;
+            animation: cycleColors 0.6s infinite;
+        }
+        .corner-light.top-right {
+            top: -400px;
+            right: -400px;
+            animation: cycleColorsOffset 0.6s infinite;
+        }
+        .corner-light.bottom-left {
+            bottom: -400px;
+            left: -400px;
+            animation: cycleColorsOffset2 0.6s infinite;
+        }
+        .corner-light.bottom-right {
+            bottom: -400px;
+            right: -400px;
+            animation: cycleColors 0.6s infinite;
+        }
+        @keyframes cycleColors {
+            0% {
+                background-color: #ff0000;
+                box-shadow: 0 0 80px #ff0000, 0 0 150px #ff0000;
+            }
+            33% {
+                background-color: #0000ff;
+                box-shadow: 0 0 80px #0000ff, 0 0 150px #0000ff;
+            }
+            66% {
+                background-color: #ffffff;
+                box-shadow: 0 0 80px #ffffff, 0 0 150px #ffffff;
+            }
+            100% {
+                background-color: #ff0000;
+                box-shadow: 0 0 80px #ff0000, 0 0 150px #ff0000;
+            }
+        }
+        @keyframes cycleColorsOffset {
+            0% {
+                background-color: #0000ff;
+                box-shadow: 0 0 80px #0000ff, 0 0 150px #0000ff;
+            }
+            33% {
+                background-color: #ffffff;
+                box-shadow: 0 0 80px #ffffff, 0 0 150px #ffffff;
+            }
+            66% {
+                background-color: #ff0000;
+                box-shadow: 0 0 80px #ff0000, 0 0 150px #ff0000;
+            }
+            100% {
+                background-color: #0000ff;
+                box-shadow: 0 0 80px #0000ff, 0 0 150px #0000ff;
+            }
+        }
+        @keyframes cycleColorsOffset2 {
+            0% {
+                background-color: #ffffff;
+                box-shadow: 0 0 80px #ffffff, 0 0 150px #ffffff;
+            }
+            33% {
+                background-color: #ff0000;
+                box-shadow: 0 0 80px #ff0000, 0 0 150px #ff0000;
+            }
+            66% {
+                background-color: #0000ff;
+                box-shadow: 0 0 80px #0000ff, 0 0 150px #0000ff;
+            }
+            100% {
+                background-color: #ffffff;
+                box-shadow: 0 0 80px #ffffff, 0 0 150px #ffffff;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Start Menu -->
     <div id="startMenu" class="menu-overlay">
+        <div class="corner-light top-left"></div>
+        <div class="corner-light top-right"></div>
+        <div class="corner-light bottom-left"></div>
+        <div class="corner-light bottom-right"></div>
         <div class="menu-container">
             <div class="menu-title">STREET RACER</div>
             <div class="menu-subtitle">Survive the traffic and rack up points</div>
