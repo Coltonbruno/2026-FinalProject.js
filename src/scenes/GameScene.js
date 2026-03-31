@@ -14,11 +14,32 @@ export class GameScene extends Phaser.Scene {
     create() {
         // ========== GAME STATE ==========
         this.gameActive = true;
+        this.isPaused = false;
         this.score = 0;
-        this.highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
+        
+        // Set spawn rate and player speed based on difficulty
+        const difficulty = this.difficulty || 'medium';
+        this.currentDifficulty = difficulty;
+        
+        // Load high score for this difficulty
+        const highScoreKey = `highScore_${difficulty}`;
+        this.highScore = localStorage.getItem(highScoreKey) ? parseInt(localStorage.getItem(highScoreKey)) : 0;
+        
         this.survivalTime = 0;
         this.speedMultiplier = 1;
-        this.trafficSpawnRate = 200; // milliseconds between spawns
+        
+        const difficultySpawnRates = {
+            'easy': 160,
+            'medium': 110,
+            'hard': 65
+        };
+        const difficultyPlayerSpeedMultipliers = {
+            'easy': 0.8,      // 20% slower
+            'medium': 1.0,    // same speed
+            'hard': 1.2       // 20% faster
+        };
+        this.trafficSpawnRate = difficultySpawnRates[difficulty] || 110;
+        this.playerSpeedMultiplier = difficultyPlayerSpeedMultipliers[difficulty] || 1.0;
         this.baseTrafficSpeed = 400;
 
         // ========== WORLD BOUNDS & CAMERA ==========
@@ -77,6 +98,12 @@ export class GameScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5).setScrollFactor(0);
 
+        this.pauseText = this.add.text(400, 600, '', {
+            font: '32px Arial',
+            fill: '#ffff00',
+            align: 'center'
+        }).setOrigin(0.5).setScrollFactor(0);
+
         // ========== TRAFFIC SPAWNING ==========
         this.trafficSpawnTimer = 0;
         this.spawnInterval = this.trafficSpawnRate;
@@ -96,12 +123,32 @@ export class GameScene extends Phaser.Scene {
         // ========== DRUNK DRIVER SPAWN TIMER ==========
         this.drunkDriverSpawnTimer = 0;
         this.drunkDriverSpawnInterval = 5000; // Spawn drunk drivers every 5 seconds (1/30 cars means roughly this interval)
+
+        // Show pause button
+        const pauseButton = document.getElementById('pauseButton');
+        if (pauseButton) {
+            pauseButton.classList.add('visible');
+        }
     }
 
     update(time, delta) {
         if (!this.gameActive) return;
 
-        // ========== UPDATE SURVIVAL TIME & DIFFICULTY ==========
+        // ========== HANDLE PAUSE STATE ==========
+        if (this.isPaused) {
+            this.pauseText.setText('PAUSED');
+            // Stop all movement
+            this.player.body.setVelocity(0, 0);
+            this.trafficGroup.children.entries.forEach(car => {
+                car.body.setVelocity(0, 0);
+            });
+            this.drunkDriverGroup.children.entries.forEach(car => {
+                car.body.setVelocity(0, 0);
+            });
+            return;
+        }
+
+        this.pauseText.setText('');
         this.survivalTime += delta / 1000;
         this.counterText.setText(`Score: ${Math.round(this.score)}\nTime: ${Math.floor(this.survivalTime)}s\nHigh Score: ${Math.round(this.highScore)}`);
 
@@ -380,7 +427,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     handlePlayerMovement(delta) {
-        const maxSpeed = 1000; // Maximum forward speed
+        const maxSpeed = 1000 * this.playerSpeedMultiplier; // Maximum forward speed, adjusted by difficulty
         const accelerationRate = 0.03; // Gradual acceleration rate (0-1)
         const momentumDecayRate = 0.98; // Momentum decay when no input (0-1)
         const brakingDecayRate = 0.97; // Harder braking deceleration (0-1)
@@ -518,11 +565,16 @@ export class GameScene extends Phaser.Scene {
         // Game over
         this.gameActive = false;
 
-        // Update high score
+        // Update high score for this difficulty
         if (this.score > this.highScore) {
             this.highScore = this.score;
-            localStorage.setItem('highScore', Math.round(this.highScore));
+            const highScoreKey = `highScore_${this.currentDifficulty}`;
+            localStorage.setItem(highScoreKey, Math.round(this.highScore));
         }
+
+        // Auto-save score with current username
+        const username = window.getCurrentUsername();
+        window.addPlayerScore(username, this.currentDifficulty, this.score);
 
         // Screen shake effect for 3 seconds
         this.cameras.main.shake(3000, 0.01);
@@ -545,6 +597,10 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(3000, () => {
             window.returnToMenu();
         });
+    }
+
+    togglePause() {
+        this.isPaused = !this.isPaused;
     }
 }
 

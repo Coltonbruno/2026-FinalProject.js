@@ -33,6 +33,145 @@
         .menu-overlay.hidden {
             display: none;
         }
+        .difficulty-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .difficulty-overlay.visible {
+            display: flex;
+        }
+        .pause-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .pause-overlay.visible {
+            display: flex;
+        }
+        .pause-menu {
+            background-color: rgba(0, 0, 0, 0.95);
+            border: 3px solid #ffff00;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            min-width: 300px;
+        }
+        .pause-menu-title {
+            font-size: 48px;
+            color: #ffff00;
+            font-weight: bold;
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px #ffff00;
+        }
+        .pause-menu-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 20px;
+            font-weight: bold;
+            background-color: #ffff00;
+            color: #000000;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .pause-menu-button:hover {
+            transform: scale(1.05);
+            background-color: #ffff80;
+        }
+        .pause-menu-button:active {
+            transform: scale(0.95);
+        }
+        .leaderboard-container {
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ffff00;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            min-height: 200px;
+        }
+        .leaderboard-title {
+            font-size: 24px;
+            color: #ffff00;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .leaderboard-tabs {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        .leaderboard-tab {
+            padding: 8px 15px;
+            background-color: #666666;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .leaderboard-tab.active {
+            background-color: #ffff00;
+            color: #000000;
+        }
+        .leaderboard-tab:hover {
+            background-color: #999999;
+        }
+        .leaderboard-tab.active:hover {
+            background-color: #ffff00;
+        }
+        .leaderboard-scores {
+            text-align: left;
+            font-size: 14px;
+            color: #ffffff;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .leaderboard-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #444444;
+        }
+        .leaderboard-entry:last-child {
+            border-bottom: none;
+        }
+        .leaderboard-rank {
+            color: #ffff00;
+            font-weight: bold;
+            min-width: 30px;
+        }
+        .leaderboard-name {
+            flex: 1;
+            text-align: left;
+            margin-left: 10px;
+        }
+        .leaderboard-score {
+            color: #00ff00;
+            font-weight: bold;
+        }
         .menu-container {
             text-align: center;
             color: #ffff00;
@@ -63,6 +202,38 @@
             transform: scale(1.1);
         }
         .start-button:active {
+            transform: scale(0.95);
+        }
+        .difficulty-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .difficulty-button {
+            font-size: 20px;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, background-color 0.2s;
+            color: #000000;
+        }
+        .difficulty-button.easy {
+            background-color: #00ff00;
+        }
+        .difficulty-button.medium {
+            background-color: #ffff00;
+        }
+        .difficulty-button.hard {
+            background-color: #ff3300;
+            color: #ffffff;
+        }
+        .difficulty-button:hover {
+            transform: scale(1.1);
+        }
+        .difficulty-button:active {
             transform: scale(0.95);
         }
         .controls {
@@ -167,6 +338,82 @@
                 box-shadow: 0 0 80px #ffffff, 0 0 150px #ffffff;
             }
         }
+        .pause-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: #ffff00;
+            color: #000000;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10000;
+            display: none !important;
+            transition: transform 0.2s, background-color 0.2s;
+            pointer-events: all;
+        }
+        .pause-button:hover {
+            transform: scale(1.1);
+            background-color: #ffff00;
+        }
+        .pause-button:active {
+            transform: scale(0.95);
+        }
+        .pause-button.visible {
+            display: block !important;
+        }
+        .username-section {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .username-label {
+            font-size: 18px;
+            color: #ffff00;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .username-input {
+            padding: 10px 15px;
+            font-size: 16px;
+            width: 200px;
+            border: 2px solid #ffff00;
+            border-radius: 5px;
+            background-color: #333333;
+            color: #ffff00;
+            text-align: center;
+        }
+        .username-input::placeholder {
+            color: #888888;
+        }
+        .username-display {
+            font-size: 16px;
+            color: #00ff00;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .username-button {
+            padding: 8px 15px;
+            margin-top: 10px;
+            margin-left: 10px;
+            font-size: 16px;
+            background-color: #ffff00;
+            color: #000000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .username-button:hover {
+            transform: scale(1.05);
+        }
+        .username-button:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
@@ -179,7 +426,13 @@
         <div class="menu-container">
             <div class="menu-title">STREET RACER</div>
             <div class="menu-subtitle">Survive the traffic and rack up points</div>
-            <button class="start-button" onclick="window.startGame()">START GAME</button>
+            <div class="username-section">
+                <div class="username-label">PLAYER NAME:</div>
+                <input type="text" id="usernameInput" class="username-input" placeholder="Enter username" maxlength="15" onkeypress="if(event.key==='Enter') window.setUsername()">
+                <button class="username-button" onclick="window.setUsername()">SET</button>
+                <div id="usernameDisplay" class="username-display"></div>
+            </div>
+            <button class="start-button" onclick="window.showDifficulty()">START GAME</button>
             <div class="controls">
                 <div class="controls-title">Controls:</div>
                 <div class="control-item"><span class="control-key">W</span> - Accelerate</div>
@@ -187,8 +440,41 @@
                 <div class="control-item"><span class="control-key">D</span> - Go Right</div>
                 <div class="control-item"><span class="control-key">S</span> - Decelerate</div>
             </div>
+            <div class="leaderboard-container">
+                <div class="leaderboard-title">LEADERBOARD</div>
+                <div class="leaderboard-tabs">
+                    <button class="leaderboard-tab active" onclick="window.switchLeaderboardTab('easy')">EASY</button>
+                    <button class="leaderboard-tab" onclick="window.switchLeaderboardTab('medium')">MEDIUM</button>
+                    <button class="leaderboard-tab" onclick="window.switchLeaderboardTab('hard')">HARD</button>
+                </div>
+                <div id="leaderboardScores" class="leaderboard-scores"></div>
+            </div>
         </div>
     </div>
+
+    <!-- Difficulty Selection Menu -->
+    <div id="difficultyMenu" class="difficulty-overlay">
+        <div class="menu-container">
+            <div class="menu-title">SELECT DIFFICULTY</div>
+            <div class="difficulty-buttons">
+                <button class="difficulty-button easy" onclick="window.startGame('easy')">EASY</button>
+                <button class="difficulty-button medium" onclick="window.startGame('medium')">MEDIUM</button>
+                <button class="difficulty-button hard" onclick="window.startGame('hard')">HARD</button>
+            </div>
+            <button class="start-button" onclick="window.backToMenu()" style="margin-top: 40px;">BACK</button>
+        </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pauseMenu" class="pause-overlay">
+        <div class="pause-menu">
+            <div class="pause-menu-title">PAUSED</div>
+            <button class="pause-menu-button" onclick="window.togglePause()">RESUME</button>
+            <button class="pause-menu-button" onclick="window.returnToMenu()">EXIT TO MENU</button>
+        </div>
+    </div>
+
+
 
     <!-- Phaser 3 from CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.js"></script>
